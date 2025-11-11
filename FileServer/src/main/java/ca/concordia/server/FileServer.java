@@ -13,7 +13,7 @@ public class FileServer {
     private int port;
     public FileServer(int port, String fileSystemName, int totalSize){
         // Initialize the FileSystemManager
-        FileSystemManager fsManager = new FileSystemManager(fileSystemName,
+        FileSystemManager fsManager = FileSystemManager.getInstance(fileSystemName,
                 10*128 );
         this.fsManager = fsManager;
         this.port = port;
