@@ -9,9 +9,9 @@ This repository contains two projects: the client and the server. You only need 
 
 
 ---------COMPILE AND RUN SERVER /CLIENT 
+
 SPLIT TERMINALS AND CD TO FileServer and FileClient respectively
 
-bash 
 ```
 mkdir -p target/classes
 find src/main/java -name "*.java" > sources.txt
