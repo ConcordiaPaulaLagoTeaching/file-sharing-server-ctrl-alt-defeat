@@ -105,6 +105,73 @@ public class FileSystemManager {
         throw new UnsupportedOperationException("Method not implemented yet.");
     }
 
+    void deleteFile(String filename) throws Exception{
+
+        //find the FEntry of the specified file
+        int fentryIndex = -1;
+        for(int i =0; i<MAXFILES;i++){
+            if( inodeTable[i].getFilename().equals(filename) ){
+                fentryIndex=i;
+                break;
+            }
+        }
+
+        FEntry delFentry=inodeTable[fentryIndex];
+        int blockIndex= delFentry.getFirstBlock();
+
+        while(blockIndex>=1 && blockIndex<MAXBLOCKS){
+
+            //overwrite block with 0
+            disk.seek(blockIndex*BLOCK_SIZE);  //move to beginning of block
+            byte[] zeroBlock  = new byte[BLOCK_SIZE];// default byte value is 0, we have 128 0's
+            disk.write(zeroBlock);
+
+            //mark block as free
+            freeBlockList[blockIndex]=true;
+
+            //get next block(if -1 the loop will end)
+            int nextBlockIndex=fnodeTable[blockIndex].getNext();
+
+            //set next as -1, and FNode block index to  negative value
+            fnodeTable[blockIndex].setNext(-1);
+            fnodeTable[blockIndex].setBlockIndex(-blockIndex);
+
+
+            blockIndex = nextBlockIndex;
+
+        }
+
+        inodeTable[fentryIndex]=new FEntry();//makes FEntry free again
+
+    }
+    void writeFile(String filename, byte[] contents) throws Exception{
+
+        int entryIndex;
+        FEntry target = null;
+        //find FEntry
+        for(int i =0;i<MAXFILES;i++){
+            if(inodeTable[i].getFilename().equals(filename)&&inodeTable[i]!=null){
+                entryIndex=i;
+                target  = inodeTable[entryIndex];
+            }
+        }
+        if (target == null)
+            throw new Exception("ERROR: File not found.");
+
+        //Calculate blocks needed for this file.
+        int blockNeeded= (int) Math.ceil((double) contents.length / BLOCK_SIZE);
+
+        //check if enough space available
+        int numFreeBlocks=0;
+        for(int i =0;i<MAXBLOCKS;i++)
+            if(freeBlockList[i]) numFreeBlocks++; //counts number  of free blocks
+
+        if(numFreeBlocks<blockNeeded)
+            throw  new Exception("ERROR: Not enough free blocks.");
+
+
+
+    }
 
     // TODO: Add readFile, writeFile and other required methods,
 }
