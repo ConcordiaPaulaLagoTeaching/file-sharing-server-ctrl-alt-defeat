@@ -18,6 +18,12 @@ public class FEntry {
         this.firstBlock = firstblock;
     }
 
+    public FEntry() {
+        this.filename = null;
+        this.filesize = 0;
+        this.firstBlock = -1;
+    }
+
     // Getters and Setters
     public String getFilename() {
         return filename;
@@ -43,5 +49,9 @@ public class FEntry {
 
     public short getFirstBlock() {
         return firstBlock;
+    }
+    
+    public void setFirstBlock(short firstBlock) {
+        this.firstBlock = firstBlock;
     }
 }

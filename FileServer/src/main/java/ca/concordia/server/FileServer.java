@@ -2,6 +2,7 @@ package ca.concordia.server;
 import ca.concordia.filesystem.FileSystemManager;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
@@ -11,13 +12,17 @@ public class FileServer {
 
     private FileSystemManager fsManager;
     private int port;
-    public FileServer(int port, String fileSystemName, int totalSize){
-        // Initialize the FileSystemManager
-        FileSystemManager fsManager = FileSystemManager.getInstance(fileSystemName,
-                10*128 );
-        this.fsManager = fsManager;
-        this.port = port;
+    public FileServer(int port, String fileSystemName, int totalSize) {
+    this.port = port;
+
+    try {
+        fsManager = FileSystemManager.getInstance(fileSystemName, totalSize);
+    } catch (IOException e) {
+        System.err.println("Failed to initialize FileSystemManager: " + e.getMessage());
+        e.printStackTrace();
+        System.exit(1); // fail fast, since without a file system the server is useless
     }
+}
 
     public void start(){
         try (ServerSocket serverSocket = new ServerSocket(12345)) {

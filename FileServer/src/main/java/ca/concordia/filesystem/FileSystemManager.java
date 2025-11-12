@@ -3,6 +3,7 @@ package ca.concordia.filesystem;
 import ca.concordia.filesystem.datastructures.FEntry;
 import ca.concordia.filesystem.datastructures.FNode;
 
+import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Arrays;
 import java.util.concurrent.locks.ReentrantLock;
@@ -36,6 +37,13 @@ public class FileSystemManager {
 
     }
 
+     public static FileSystemManager getInstance(String filename, int totalSize) throws IOException {
+        if (instance == null) {
+            instance = new FileSystemManager(filename, totalSize);
+        }
+        return instance;
+    }
+
     private void initializeFileSystem(String filename, int totalSize){
         try{
             inodeTable = new FEntry[MAXFILES];
@@ -46,7 +54,8 @@ public class FileSystemManager {
             Arrays.fill(freeBlockList,true);   //make the whole bitmap true indicating that all blocks are free
 
             for(int i =0; i<MAXFILES;i++)
-                inodeTable[i]= new FEntry();
+            inodeTable[i] = new FEntry("", (short) -1, (short) 0);
+
 
             for(int i=0;i<MAXBLOCKS;i++){
                 fnodeTable[i]= new FNode(-i); //initalize FNode list showing all  blocks  free
