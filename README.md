@@ -6,3 +6,16 @@ In this project, you will be developing a file-sharing server. A file share serv
 
 This repository contains two projects: the client and the server. You only need to modify the server. 
 
+
+
+---------COMPILE AND RUN SERVER /CLIENT 
+
+SPLIT TERMINALS AND CD TO FileServer and FileClient respectively
+
+```
+mkdir -p target/classes
+find src/main/java -name "*.java" > sources.txt
+javac -d target/classes @sources.txt
+java -cp target/classes ca.concordia.Main
+
+```
