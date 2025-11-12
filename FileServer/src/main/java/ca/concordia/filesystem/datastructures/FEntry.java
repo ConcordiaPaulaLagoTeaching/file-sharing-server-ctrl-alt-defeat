@@ -8,6 +8,12 @@ public class FEntry {
     private short filesize;
     private short firstBlock; // Pointers to data blocks
 
+    public FEntry(){
+        this.filename = null;
+        this.filesize = 0;
+        this.firstBlock = -1;
+    }
+
     public FEntry(String filename, short filesize, short firstblock) throws IllegalArgumentException{
         //Check filename is max 11 bytes long
         if (filename.length() > 11) {
@@ -39,6 +45,10 @@ public class FEntry {
             throw new IllegalArgumentException("Filesize cannot be negative.");
         }
         this.filesize = filesize;
+    }
+
+    public void setFirstBlock(short firstblock){
+        this.firstBlock=firstblock;
     }
 
     public short getFirstBlock() {
