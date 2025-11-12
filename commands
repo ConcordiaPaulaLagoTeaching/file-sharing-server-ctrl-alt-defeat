@@ -1,0 +1,19 @@
+---------COMPILE AND RUN SERVER
+
+
+cd ~/Desktop/SCHOOL/COEN_346/Prog_Ass_2/file-sharing-server-ctrl-alt-defeat/FileServer
+mkdir -p target/classes
+find src/main/java -name "*.java" > sources.txt
+javac -d target/classes @sources.txt
+java -cp target/classes ca.concordia.server.FileServer
+
+
+
+ ---------COMPILE AND RUN CLIENT 
+ 
+cd ~/Desktop/SCHOOL/COEN_346/Prog_Ass_2/file-sharing-server-ctrl-alt-defeat/FileClient
+mkdir -p target/classes
+find src/main/java -name "*.java" > sources.txt
+javac -d target/classes @sources.txt
+java -cp target/classes ca.concordia.client.FileClient
+
