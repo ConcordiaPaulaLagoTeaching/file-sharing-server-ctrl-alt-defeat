@@ -73,7 +73,6 @@ public class FileSystemManager {
     }
 
     public void createFile(String fileName) throws Exception {
-        // TODO
         if(fileName.length()>11)
             throw new Exception("ERROR: filename too large");
         if (fileName.length()==0)
@@ -102,55 +101,59 @@ public class FileSystemManager {
         entry.setFirstBlock((short) -1);
 
 
-        throw new UnsupportedOperationException("Method not implemented yet.");
     }
 
-    void deleteFile(String filename) throws Exception{
+    public void deleteFile(String filename) throws Exception {
 
         //find the FEntry of the specified file
         int fentryIndex = -1;
-        for(int i =0; i<MAXFILES;i++){
-            if( inodeTable[i].getFilename().equals(filename) ){
-                fentryIndex=i;
-                break;
+        for(int i =0; i<MAXFILES;i++) {
+            if (inodeTable[i] != null && inodeTable[i].getFilename() != null &&
+                    inodeTable[i].getFilename().equals(filename)) {
+                {
+                    fentryIndex = i;
+                    break;
+                }
             }
         }
+            if (fentryIndex == -1)
+                throw new Exception("ERROR: File not found.");
 
-        FEntry delFentry=inodeTable[fentryIndex];
-        int blockIndex= delFentry.getFirstBlock();
+            FEntry delFentry = inodeTable[fentryIndex];
+            int blockIndex = delFentry.getFirstBlock();
 
-        while(blockIndex>=1 && blockIndex<MAXBLOCKS){
+            while (blockIndex >= 1 && blockIndex < MAXBLOCKS) {
 
-            //overwrite block with 0
-            disk.seek(blockIndex*BLOCK_SIZE);  //move to beginning of block
-            byte[] zeroBlock  = new byte[BLOCK_SIZE];// default byte value is 0, we have 128 0's
-            disk.write(zeroBlock);
+                //overwrite block with 0
+                disk.seek(blockIndex * BLOCK_SIZE);  //move to beginning of block
+                byte[] zeroBlock = new byte[BLOCK_SIZE];// default byte value is 0, we have 128 0's
+                disk.write(zeroBlock);
 
-            //mark block as free
-            freeBlockList[blockIndex]=true;
+                //mark block as free
+                freeBlockList[blockIndex] = true;
 
-            //get next block(if -1 the loop will end)
-            int nextBlockIndex=fnodeTable[blockIndex].getNext();
+                //get next block(if -1 the loop will end)
+                int nextBlockIndex = fnodeTable[blockIndex].getNext();
 
-            //set next as -1, and FNode block index to  negative value
-            fnodeTable[blockIndex].setNext(-1);
-            fnodeTable[blockIndex].setBlockIndex(-blockIndex);
+                //set next as -1, and FNode block index to  negative value
+                fnodeTable[blockIndex].setNext(-1);
+                fnodeTable[blockIndex].setBlockIndex(-blockIndex);
 
 
-            blockIndex = nextBlockIndex;
+                blockIndex = nextBlockIndex;
 
-        }
+            }
 
-        inodeTable[fentryIndex]=new FEntry();//makes FEntry free again
+            inodeTable[fentryIndex] = new FEntry();//makes FEntry free again
 
     }
-    void writeFile(String filename, byte[] contents) throws Exception{
+    public void writeFile(String filename, byte[] contents) throws Exception{
 
         int entryIndex;
         FEntry target = null;
         //find FEntry
         for(int i =0;i<MAXFILES;i++){
-            if(inodeTable[i].getFilename().equals(filename)&&inodeTable[i]!=null){
+            if(inodeTable[i] != null && filename.equals(inodeTable[i].getFilename())){
                 entryIndex=i;
                 target  = inodeTable[entryIndex];
             }
@@ -169,9 +172,119 @@ public class FileSystemManager {
         if(numFreeBlocks<blockNeeded)
             throw  new Exception("ERROR: Not enough free blocks.");
 
+        //to keep track of allocated blocks in the case we need to changes if error occur
+        int[] allocatedBlocks=new int[blockNeeded]; //keep hold of the blocks we will use for this file
+        int allocatedIndex =0;
+        try {
+            int offset=0;
+            int previousBlock = -1; //for FNode
+
+            //loops until we went over all blocks or until we used all the blocks needed
+            for(int i=1;i<MAXBLOCKS && allocatedIndex<blockNeeded ;i++){
+                if(freeBlockList[i]){
+                    freeBlockList[i]=false;
+                    fnodeTable[i].setBlockIndex(i); // mark block as used by making it positive
+                    allocatedBlocks[allocatedIndex++]=i;//holds the address of block we will use and updated variable that tracks number of blocks used
+
+                    //write file
+                    disk.seek(BLOCK_SIZE*i); //goes to start of block i
+                    int remaining = Math.min(BLOCK_SIZE, contents.length - offset);
+                    disk.write(contents, offset, remaining);
+                    offset += remaining;
+
+                    //set first block of fnode
+                    if(previousBlock!=-1)
+                        fnodeTable[previousBlock].setNext(i);
+                    previousBlock=i;//update previous block with the current one
+
+                }
+            }
+            fnodeTable[previousBlock].setNext(-1);//set next block of last block as -1
+
+            // Free old blocks
+            int oldBlock = target.getFirstBlock();
+            while (oldBlock >= 1 && oldBlock < MAXBLOCKS) {
+                freeBlockList[oldBlock] = true;
+                fnodeTable[oldBlock].setBlockIndex(-oldBlock);
+                oldBlock = fnodeTable[oldBlock].getNext();
+            }
+
+            //  Update FEntry
+            target.setFirstBlock((short)allocatedBlocks[0]);
+            target.setFilesize((short) contents.length);
+
+            System.out.println("File written: " + filename);
+
+
+        } catch (Exception e) {
+            for (int b : allocatedBlocks) {
+                if (b > 0) {
+                    freeBlockList[b] = true;
+                    fnodeTable[b].setBlockIndex(-b);
+                }
+            }
+            throw new RuntimeException(e);
+        }
+    }
+
+    public byte[] readFile(String filename) throws Exception{
+        //find the FEntry of the specified file
+
+        int fentryIndex = -1;
+        FEntry target = null;
+
+
+        for(int i =0; i<MAXFILES;i++){
+           if (inodeTable[i] != null && inodeTable[i].getFilename() != null &&
+                    inodeTable[i].getFilename().equals(filename)) {
+                fentryIndex=i;
+                target=inodeTable[i];
+                break;
+            }
+        }
+        if(target==null)
+            throw new Exception("ERROR: File not found.");
+
+        //create buffer that holds file data
+        int fileSize = target.getFilesize();
+        byte[] data= new byte[fileSize];
+
+        int blockIndex = target.getFirstBlock();
+        int offset = 0;
+
+        if (target.getFirstBlock() == -1) {
+            return new byte[0]; // empty file
+        }
+
+        while (blockIndex >= 1 && blockIndex < MAXBLOCKS && offset < fileSize) {
+            disk.seek(blockIndex * BLOCK_SIZE);
+            int bytesToRead = Math.min(BLOCK_SIZE, fileSize - offset);
+            disk.readFully(data, offset, bytesToRead);
+
+            offset += bytesToRead;
+            blockIndex = fnodeTable[blockIndex].getNext(); // move to next block
+        }
+
+        return data;
 
 
     }
+    public String[] listFiles(){
+        // count existing files
+        int count = 0;
+        for (FEntry entry : inodeTable) {
+            if (entry != null && entry.getFilename() != null)
+                count++;
+        }
 
-    // TODO: Add readFile, writeFile and other required methods,
+        // fill array with names
+        String[] files = new String[count];
+        int index = 0;
+        for (FEntry entry : inodeTable) {
+            if (entry != null && entry.getFilename() != null)
+                files[index++] = entry.getFilename();
+        }
+
+        return files;
+    }
 }

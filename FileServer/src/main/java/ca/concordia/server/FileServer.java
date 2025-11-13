@@ -36,23 +36,79 @@ public class FileServer {
                         String[] parts = line.split(" ");
                         String command = parts[0].toUpperCase();
 
-                        switch (command) {
+                        try {
+                            switch (command) {
                             case "CREATE":
                                 fsManager.createFile(parts[1]);
                                 writer.println("SUCCESS: File '" + parts[1] + "' created.");
+                                writer.println("<END>");
                                 writer.flush();
                                 break;
-                            //TODO: Implement other commands READ, WRITE, DELETE, LIST
-                            case "QUIT":
+
+                            case "DELETE":
+                                fsManager.deleteFile(parts[1]);
+                                writer.println("SUCCESS: File '" + parts[1] + "' deleted.");
+                                writer.println("<END>");
+                                writer.flush();
+                                break;
+                            case "WRITE":
+                                if (parts.length < 3) {
+                                    writer.println("ERROR: Missing file data.");
+                                    writer.println("<END>");
+                                    writer.flush();
+                                    break;
+                                }
+                                String fileData = String.join(" ", java.util.Arrays.copyOfRange(parts, 2, parts.length));
+                                fsManager.writeFile(parts[1], fileData.getBytes());
+                                writer.println("SUCCESS: File '" + parts[1] + "' written.");
+                                writer.println("<END>");
+                                writer.flush();
+                                break;
+
+                            case "READ":
+                                byte[] content = fsManager.readFile(parts[1]);
+                                writer.println("CONTENT: " + new String(content));
+                                writer.println("<END>");
+                                writer.flush();
+                                break;
+
+                            case "LIST":
+                                String[] files = fsManager.listFiles();
+                                if (files.length == 0) {
+                                    writer.println("No files found.");
+                                } else {
+                                    String joined = String.join(", ", files);
+                                    writer.println("Files: " + joined);
+                                }
+                                writer.println("<END>");
+                                writer.flush();
+                                break;
+
+
+
+                                case "QUIT":
                                 writer.println("SUCCESS: Disconnecting.");
+                                writer.println("<END>");
+                                writer.flush();
                                 return;
                             default:
                                 writer.println("ERROR: Unknown command.");
+                                writer.println("<END>");
+                                writer.flush();
                                 break;
+                            }
+                        } catch (Exception e) {
+                            // Ensure client always receives an error response and the terminator
+                            String msg = e.getMessage() == null ? "Internal server error" : e.getMessage();
+                            writer.println("ERROR: " + msg);
+                            writer.println("<END>");
+                            writer.flush();
+                            e.printStackTrace();
                         }
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
+
                 } finally {
                     try {
                         clientSocket.close();
