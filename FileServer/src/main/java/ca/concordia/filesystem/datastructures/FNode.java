@@ -21,4 +21,8 @@ public class FNode {
     public void setBlockIndex(int blockIndex) {
         this.blockIndex = blockIndex;
     }
+
+    public int getBlockIndex() {
+        return blockIndex;
+    }
 }
