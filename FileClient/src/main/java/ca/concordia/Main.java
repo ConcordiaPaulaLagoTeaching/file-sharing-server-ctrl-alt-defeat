@@ -29,13 +29,8 @@ public class Main {
                     writer.println(userInput);
                     System.out.println("Message sent to the server: " + userInput);
                     //get response
-                    System.out.println("Response from server :");
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        System.out.println( line );
-                        if ("<END>".equals(line)) break;
-                    }
-
+                    String response = reader.readLine();
+                    System.out.println("Response from server: " + response);
                     userInput = scanner.nextLine(); // Read next line
                 }
 

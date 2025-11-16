@@ -30,8 +30,10 @@ public class FEntry {
     }
 
     public void setFilename(String filename) {
-        if (filename.length() > 11) {
-            throw new IllegalArgumentException("Filename cannot be longer than 11 characters.");
+
+        if (filename == null) {
+            this.filename = null;
+            return;
         }
         this.filename = filename;
     }

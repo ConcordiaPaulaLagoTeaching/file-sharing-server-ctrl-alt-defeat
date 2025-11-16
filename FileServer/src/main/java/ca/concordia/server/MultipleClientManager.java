@@ -34,34 +34,29 @@ public class MultipleClientManager implements Runnable{
                         case "CREATE":
                             fsManager.createFile(parts[1]);
                             writer.println("SUCCESS: File '" + parts[1] + "' created.");
-                            writer.println("<END>");
                             writer.flush();
                             break;
 
                         case "DELETE":
                             fsManager.deleteFile(parts[1]);
                             writer.println("SUCCESS: File '" + parts[1] + "' deleted.");
-                            writer.println("<END>");
                             writer.flush();
                             break;
                         case "WRITE":
                             if (parts.length < 3) {
                                 writer.println("ERROR: Missing file data.");
-                                writer.println("<END>");
                                 writer.flush();
                                 break;
                             }
                             String fileData = String.join(" ", java.util.Arrays.copyOfRange(parts, 2, parts.length));
                             fsManager.writeFile(parts[1], fileData.getBytes());
                             writer.println("SUCCESS: File '" + parts[1] + "' written.");
-                            writer.println("<END>");
                             writer.flush();
                             break;
 
                         case "READ":
                             byte[] content = fsManager.readFile(parts[1]);
                             writer.println("CONTENT: " + new String(content));
-                            writer.println("<END>");
                             writer.flush();
                             break;
 
@@ -73,7 +68,6 @@ public class MultipleClientManager implements Runnable{
                                 String joined = String.join(", ", files);
                                 writer.println("Files: " + joined);
                             }
-                            writer.println("<END>");
                             writer.flush();
                             break;
 
@@ -84,9 +78,9 @@ public class MultipleClientManager implements Runnable{
                             writer.println("<END>");
                             writer.flush();
                             return;
+
                         default:
                             writer.println("ERROR: Unknown command.");
-                            writer.println("<END>");
                             writer.flush();
                             break;
                     }
@@ -94,7 +88,6 @@ public class MultipleClientManager implements Runnable{
                     // Ensure client always receives an error response and the terminator
                     String msg = e.getMessage() == null ? "Internal server error" : e.getMessage();
                     writer.println("ERROR: " + msg);
-                    writer.println("<END>");
                     writer.flush();
                     e.printStackTrace();
                 }

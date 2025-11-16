@@ -11,8 +11,6 @@ public class FileSystemManager {
 
     private final int MAXFILES = 5;
     private final int MAXBLOCKS = 10;
-    private final int FENTRYSIZE = 15;
-    private final int FNODESIZE = 4;
 
     private/*final*/  static FileSystemManager instance;
     private /*final*/ RandomAccessFile disk;
@@ -26,6 +24,83 @@ public class FileSystemManager {
     private boolean[] freeBlockList; // Bitmap for free blocks
     private FNode[] fnodeTable;
 
+
+
+    private void saveData() throws Exception {
+
+        //write metadata to disk in block 0
+        disk.seek(0);
+
+        //write the list of all free blocks
+        for (int i = 0; i < MAXBLOCKS; i++) {
+            disk.writeBoolean(freeBlockList[i]);
+        }
+
+        //write FEntrys
+        for (int i = 0; i < MAXFILES; i++) {
+            FEntry e = inodeTable[i];
+
+            // filename padded to 11 bytes
+            String name = (e.getFilename() == null ? "" : e.getFilename());
+            byte[] nameBytes = Arrays.copyOf(name.getBytes(), 11);
+            disk.write(nameBytes);
+
+            disk.writeShort(e.getFilesize());
+            disk.writeShort(e.getFirstBlock());
+        }
+
+        //write FNode
+        for (int i = 0; i < MAXBLOCKS; i++) {
+            FNode n = fnodeTable[i];
+            disk.writeShort(n.getBlockIndex());
+            disk.writeShort(n.getNext());
+        }
+    }
+
+    private void loadData() throws Exception {
+        //load all metadata from the disk
+        disk.seek(0);
+
+        //free block list
+        for (int i = 0; i < MAXBLOCKS; i++) {
+            freeBlockList[i] = disk.readBoolean();
+        }
+
+        // FEntry
+        for (int i = 0; i < MAXFILES; i++) {
+            byte[] nameBytes = new byte[11];
+            disk.readFully(nameBytes);
+            String name = new String(nameBytes).trim();
+            short size = disk.readShort();
+            short firstBlock = disk.readShort();
+
+            FEntry entry = new FEntry();
+
+            // empty filename means unused entry
+            if (name.isEmpty()) {
+                entry.setFilename(null);
+                entry.setFilesize((short) 0);
+                entry.setFirstBlock((short) -1);
+            } else {
+
+                entry.setFilename(name);
+                entry.setFilesize(size);
+                entry.setFirstBlock(firstBlock);
+            }
+            inodeTable[i] = entry;
+        }
+
+
+        // 3) FNode
+        for (int i = 0; i < MAXBLOCKS; i++) {
+            short blockIndex = disk.readShort();
+            short next = disk.readShort();
+
+            FNode node = new FNode(blockIndex);
+            node.setNext(next);
+            fnodeTable[i] = node;
+        }
+    }
     public FileSystemManager(String filename, int totalSize) {
         // Initialize the file system manager with a file
         if(instance == null) {
@@ -44,25 +119,28 @@ public class FileSystemManager {
             freeBlockList= new boolean[MAXBLOCKS];
             disk = new RandomAccessFile(filename,"rw");
 
-            Arrays.fill(freeBlockList,true);   //make the whole bitmap true indicating that all blocks are free
-
-            for(int i =0; i<MAXFILES;i++)
-                inodeTable[i]= new FEntry();
-
-            for(int i=0;i<MAXBLOCKS;i++){
-                fnodeTable[i]= new FNode(-i); //initalize FNode list showing all  blocks  free
-            }
-
-            freeBlockList[0]=false;//first block holds FEntry and FNode
 
             if(disk.length()==0){
 
+                Arrays.fill(freeBlockList,true);   //make the whole bitmap true indicating that all blocks are free
+
+                for(int i =0; i<MAXFILES;i++)
+                    inodeTable[i]= new FEntry();
+
+                for(int i=0;i<MAXBLOCKS;i++){
+                    fnodeTable[i]= new FNode(-i); //initalize FNode list showing all  blocks  free
+                }
+
+                freeBlockList[0]=false;//first block holds FEntry and FNode
+
                 disk.setLength(totalSize); //creates new disk with specified size if new file system
+                saveData();
                 System.out.println("New file system created: " + filename);
 
             }
-            else{ //if already exist it just opens it again, doesnt change disk
+            else{ //if already exist it just opens it again, load disk with the metadata
                 System.out.println("Loaded existing file system: " + filename);
+                loadData();
 
             }
 
@@ -127,6 +205,7 @@ public class FileSystemManager {
             entry.setFilename(fileName);
             entry.setFilesize((short) 0);
             entry.setFirstBlock((short) -1);
+            saveData();//update the disk with metadata modification
         }finally {
             writelock.unlock();
         }
@@ -177,6 +256,7 @@ public class FileSystemManager {
             }
 
             inodeTable[fentryIndex] = new FEntry();//makes FEntry free again
+            saveData();//update the disk with metadata modification
         }finally {
             writelock.unlock();
         }
@@ -246,6 +326,8 @@ public class FileSystemManager {
                 //  Update FEntry
                 target.setFirstBlock((short) allocatedBlocks[0]);
                 target.setFilesize((short) contents.length);
+
+                saveData();//update the disk with metadata modification
 
                 System.out.println("File written: " + filename);
 
